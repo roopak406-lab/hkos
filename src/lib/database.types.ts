@@ -36,9 +36,24 @@ export type Kitchen = {
   delivery_radius_note: string | null;
   theme: Record<string, string>;
   is_active: boolean;
+  /** auto = follow cut-off; open = always accept; closed = force closed. */
+  ordering_status: 'auto' | 'open' | 'closed';
+  upi_qr_url: string | null;
+  notification_email: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export type Review = {
+  id: string;
+  kitchen_id: string;
+  order_id: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
 }
 
 export type KitchenUser = {
@@ -244,6 +259,7 @@ export type Database = {
       order_items: RowR<OrderItem, [Fk<'order_id', 'orders'>, Fk<'product_id', 'products'>, Fk<'variant_id', 'product_variants'>]>;
       expense_categories: Row<ExpenseCategory>;
       expenses: RowR<Expense, [Fk<'expense_category_id', 'expense_categories'>]>;
+      reviews: RowR<Review, [Fk<'order_id', 'orders'>, Fk<'customer_id', 'customers'>]>;
     };
     Views: {
       v_daily_menu_resolved: { Row: ResolvedMenuItem; Relationships: [] };

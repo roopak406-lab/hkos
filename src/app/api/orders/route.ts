@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { placeOrderSchema } from '@/lib/validators';
 import { getOrderingWindow } from '@/lib/ordering';
+import { sendOrderEmail } from '@/lib/email';
 
 /**
  * POST /api/orders — public checkout endpoint.
@@ -67,6 +68,34 @@ export async function POST(req: Request) {
     // P0002 = limited batch exceeded; surface a friendly message.
     const status = error.message.includes('left') ? 409 : 400;
     return NextResponse.json({ error: error.message }, { status });
+  }
+
+  const result = data as { order_id: string; order_number: string; total_paise: number };
+
+  // Best-effort owner email (only when RESEND_API_KEY is configured).
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const [{ data: k }, { data: items }] = await Promise.all([
+        supabase.from('kitchens').select('name, notification_email').eq('id', input.kitchenId).maybeSingle(),
+        supabase.from('order_items').select('quantity, product_name, variant_name').eq('order_id', result.order_id),
+      ]);
+      if (k?.notification_email) {
+        await sendOrderEmail({
+          to: k.notification_email,
+          kitchenName: k.name,
+          orderNumber: result.order_number,
+          customerName: input.customer.name,
+          phone: input.customer.phone,
+          flat: input.customer.flatNumber,
+          tower: input.customer.tower ?? null,
+          totalPaise: result.total_paise,
+          deliveryDate: input.deliveryDate,
+          items: (items ?? []) as { quantity: number; product_name: string; variant_name: string | null }[],
+        });
+      }
+    } catch {
+      /* never fail the order because of a notification */
+    }
   }
 
   return NextResponse.json(data, { status: 201 });

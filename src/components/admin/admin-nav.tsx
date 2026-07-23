@@ -9,6 +9,7 @@ import {
   ChefHat,
   Wallet,
   Users,
+  Settings,
   ExternalLink,
   LogOut,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const NAV = [
   { href: '/admin/kitchen', label: 'Kitchen', icon: ChefHat },
   { href: '/admin/finance', label: 'Finance', icon: Wallet },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AdminNav({
@@ -100,7 +102,7 @@ export function AdminNav({
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden safe-bottom">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-7">
           {NAV.map((item) => (
             <Link
               key={item.href}

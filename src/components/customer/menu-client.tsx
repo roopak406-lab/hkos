@@ -131,7 +131,7 @@ export function MenuClient({
       <div className="container mt-5">
         <div className="flex items-center gap-2 rounded-xl bg-accent/15 px-4 py-3 text-sm font-medium text-accent-foreground">
           <Sparkles className="size-4 text-accent" />
-          Tomorrow’s Chef’s Menu · <span className="font-bold">{menuDateLabel}</span>
+          Chef’s Menu for · <span className="font-bold">{menuDateLabel}</span>
         </div>
       </div>
 

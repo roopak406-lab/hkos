@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireKitchen } from '@/lib/auth';
 import { rupeesToPaise } from '@/lib/money';
-import type { Order, OrderStatus } from '@/lib/database.types';
+import type { Kitchen, Order, OrderStatus } from '@/lib/database.types';
 
 /**
  * All admin mutations. Every call re-resolves the current kitchen and relies on
@@ -141,6 +141,33 @@ export async function saveProduct(input: {
     : await supabase.from('products').insert(row);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/menu');
+}
+
+export async function updateKitchenSettings(input: {
+  orderCutoffTime?: string;
+  orderingStatus?: 'auto' | 'open' | 'closed';
+  upiId?: string;
+  upiDisplayName?: string;
+  notificationEmail?: string;
+  upiQrUrl?: string | null;
+}) {
+  const { kitchen } = await requireKitchen();
+  const supabase = await createClient();
+  const patch: Partial<Kitchen> = {};
+  if (input.orderCutoffTime !== undefined) patch.order_cutoff_time = input.orderCutoffTime;
+  if (input.orderingStatus !== undefined) patch.ordering_status = input.orderingStatus;
+  if (input.upiId !== undefined) patch.upi_id = input.upiId || null;
+  if (input.upiDisplayName !== undefined) patch.upi_display_name = input.upiDisplayName || null;
+  if (input.notificationEmail !== undefined)
+    patch.notification_email = input.notificationEmail || null;
+  if (input.upiQrUrl !== undefined) patch.upi_qr_url = input.upiQrUrl;
+
+  const { error } = await supabase.from('kitchens').update(patch).eq('id', kitchen.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/settings');
+  revalidatePath('/admin');
+  revalidatePath(`/k/${kitchen.slug}`);
+  revalidatePath('/order');
 }
 
 export async function archiveProduct(id: string, archived: boolean) {

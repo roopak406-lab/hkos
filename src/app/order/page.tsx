@@ -1,20 +1,16 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { tomorrowKey, prettyDate } from '@/lib/format';
-import { getOrderingWindow, DEFAULT_KITCHEN_SLUG } from '@/lib/ordering';
+import { prettyDate } from '@/lib/format';
+import { DEFAULT_KITCHEN_SLUG } from '@/lib/ordering';
+import { loadPublicMenu } from '@/lib/public-menu';
 import { MenuClient } from '@/components/customer/menu-client';
-import type {
-  ResolvedMenuItem,
-  DeliverySlot,
-  Kitchen,
-  ProductVariant,
-} from '@/lib/database.types';
+import type { Kitchen } from '@/lib/database.types';
 
 export const revalidate = 30;
 
 /**
- * The public, WhatsApp-shareable ordering page — a single, clean URL (`/order`)
- * bound to the default kitchen. Reuses the same MenuClient as `/k/[slug]`.
+ * The public, WhatsApp-shareable ordering page — a single clean URL (`/order`)
+ * bound to the default kitchen. Shows the next orderable published menu.
  */
 export default async function OrderPage() {
   const supabase = await createClient();
@@ -28,53 +24,19 @@ export default async function OrderPage() {
     .maybeSingle();
   if (!kitchen) notFound();
 
-  const menuDate = tomorrowKey();
-
-  const [{ data: items }, { data: slots }] = await Promise.all([
-    supabase
-      .from('v_daily_menu_resolved')
-      .select('*')
-      .eq('kitchen_id', kitchen.id)
-      .eq('menu_date', menuDate)
-      .eq('is_available', true)
-      .order('category_sort', { ascending: true })
-      .order('sort_order', { ascending: true }),
-    supabase
-      .from('delivery_slots')
-      .select('*')
-      .eq('kitchen_id', kitchen.id)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true }),
-  ]);
-
-  const productIds = (items ?? []).map((i) => (i as ResolvedMenuItem).product_id);
-  const { data: variants } = productIds.length
-    ? await supabase
-        .from('product_variants')
-        .select('*')
-        .in('product_id', productIds)
-        .is('deleted_at', null)
-        .order('sort_order', { ascending: true })
-    : { data: [] as ProductVariant[] };
-
-  const variantsByProduct: Record<string, ProductVariant[]> = {};
-  for (const v of (variants ?? []) as ProductVariant[]) {
-    (variantsByProduct[v.product_id] ??= []).push(v);
-  }
-
-  const window = getOrderingWindow(menuDate, kitchen.order_cutoff_time, kitchen.timezone);
+  const menu = await loadPublicMenu(supabase, kitchen as Kitchen);
 
   return (
     <MenuClient
       kitchen={kitchen as Kitchen}
-      items={(items ?? []) as ResolvedMenuItem[]}
-      slots={(slots ?? []) as DeliverySlot[]}
-      variantsByProduct={variantsByProduct}
-      menuDate={menuDate}
-      menuDateLabel={prettyDate(menuDate)}
+      items={menu.items}
+      slots={menu.slots}
+      variantsByProduct={menu.variantsByProduct}
+      menuDate={menu.menuDate ?? ''}
+      menuDateLabel={menu.menuDate ? prettyDate(menu.menuDate) : ''}
       basePath="/order"
-      orderingClosed={window.closed}
-      cutoffLabel={window.cutoffLabel}
+      orderingClosed={menu.orderingClosed}
+      cutoffLabel={menu.cutoffLabel}
     />
   );
 }

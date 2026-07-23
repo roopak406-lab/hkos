@@ -24,6 +24,11 @@ function wallClock(tz: string, at: Date = new Date()): string {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
+/** Today's date ('YYYY-MM-DD') in a given timezone. */
+export function todayInTz(tz: string, at: Date = new Date()): string {
+  return wallClock(tz, at).slice(0, 10);
+}
+
 /** Subtract one day from a 'YYYY-MM-DD' date string (timezone-agnostic). */
 function previousDay(dateKey: string): string {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -36,21 +41,32 @@ export interface OrderingWindow {
   closed: boolean;
   /** 'HH:mm' cut-off time shown to the customer. */
   cutoffLabel: string;
+  /** Reason ordering is closed, when applicable. */
+  reason?: 'cutoff' | 'manual';
 }
+
+export type OrderingStatus = 'auto' | 'open' | 'closed';
 
 /**
  * Ordering for a delivery `menuDate` closes at `cutoffTime` on the PREVIOUS day
- * (e.g. 18:00 the day before), evaluated in `tz`.
+ * (e.g. 18:00 the day before), evaluated in `tz`. An `override` set by the owner
+ * can force ordering open or closed regardless of the cut-off.
  */
 export function getOrderingWindow(
   menuDate: string,
   cutoffTime: string,
   tz: string,
+  override: OrderingStatus = 'auto',
 ): OrderingWindow {
   const cutoffHm = cutoffTime.slice(0, 5); // 'HH:mm'
+  if (override === 'open') return { closed: false, cutoffLabel: cutoffHm };
+  if (override === 'closed') {
+    return { closed: true, cutoffLabel: cutoffHm, reason: 'manual' };
+  }
   const cutoffMoment = `${previousDay(menuDate)}T${cutoffHm}`;
   const nowMoment = wallClock(tz);
-  return { closed: nowMoment >= cutoffMoment, cutoffLabel: cutoffHm };
+  const closed = nowMoment >= cutoffMoment;
+  return { closed, cutoffLabel: cutoffHm, reason: closed ? 'cutoff' : undefined };
 }
 
 /** Build a UPI intent deep link (scanned by any UPI app, pre-fills amount). */

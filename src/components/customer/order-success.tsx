@@ -6,11 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatPaise, paiseToRupees } from '@/lib/money';
 import { buildUpiLink } from '@/lib/ordering';
 import { PaymentPanel } from '@/components/customer/payment-panel';
+import { ReviewForm } from '@/components/customer/review-form';
 
 interface Props {
+  kitchenId: string;
   kitchenName: string;
   upiId: string | null;
   upiDisplayName: string | null;
+  upiQrUrl: string | null;
   whatsappNumber: string | null;
   orderNumber: string;
   totalPaise: number;
@@ -24,15 +27,18 @@ interface Props {
  * server-side (amount pre-filled) — falls back to NEXT_PUBLIC_UPI_QR_URL.
  */
 export async function OrderSuccess({
+  kitchenId,
   kitchenName,
   upiId,
   upiDisplayName,
+  upiQrUrl,
   whatsappNumber,
   orderNumber,
   totalPaise,
   backHref,
 }: Props) {
-  let qrDataUrl: string | null = process.env.NEXT_PUBLIC_UPI_QR_URL ?? null;
+  // Priority: the kitchen's uploaded QR → env QR → auto-generated from UPI ID.
+  let qrDataUrl: string | null = upiQrUrl ?? process.env.NEXT_PUBLIC_UPI_QR_URL ?? null;
   if (!qrDataUrl && upiId) {
     try {
       const link = buildUpiLink({
@@ -85,7 +91,11 @@ export async function OrderSuccess({
         </CardContent>
       </Card>
 
-      <div className="mt-6 w-full max-w-md">
+      <div className="mt-4 w-full max-w-md">
+        <ReviewForm kitchenId={kitchenId} orderNumber={orderNumber} />
+      </div>
+
+      <div className="mt-4 w-full max-w-md">
         <Button asChild variant="outline" size="lg" className="w-full">
           <Link href={backHref}>Back to menu</Link>
         </Button>

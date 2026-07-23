@@ -9,6 +9,7 @@ import {
   Users,
   Wallet,
   ArrowRight,
+  Star,
 } from 'lucide-react';
 import { requireKitchen } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -26,7 +27,7 @@ export default async function AdminDashboard() {
   const { kitchen } = await requireKitchen();
   const supabase = await createClient();
 
-  const [{ data: dash }, { data: tomorrowMenu }] = await Promise.all([
+  const [{ data: dash }, { data: tomorrowMenu }, { data: reviews }] = await Promise.all([
     supabase.rpc('business_dashboard', { p_kitchen_id: kitchen.id, p_date: toDateKey() }),
     supabase
       .from('daily_menus')
@@ -34,12 +35,24 @@ export default async function AdminDashboard() {
       .eq('kitchen_id', kitchen.id)
       .eq('menu_date', tomorrowKey())
       .maybeSingle(),
+    supabase
+      .from('reviews')
+      .select('rating, comment, customer_name, created_at')
+      .eq('kitchen_id', kitchen.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
   ]);
 
   const d = (dash ?? {}) as DashboardSummary;
   const itemCount =
     (tomorrowMenu?.daily_menu_items as unknown as { count: number }[] | undefined)?.[0]?.count ?? 0;
   const published = tomorrowMenu?.status === 'published';
+
+  const reviewList = reviews ?? [];
+  const avgRating =
+    reviewList.length > 0
+      ? reviewList.reduce((s, r) => s + r.rating, 0) / reviewList.length
+      : null;
 
   return (
     <div className="space-y-6">
@@ -68,6 +81,13 @@ export default async function AdminDashboard() {
           icon={IndianRupee} />
         <StatCard label="Best seller" value={d.best_selling ?? '—'} icon={Trophy} tone="primary" />
         <StatCard label="Repeat customers" value={String(d.repeat_customers ?? 0)} icon={Users} />
+        <StatCard
+          label="Avg rating"
+          value={avgRating ? `${avgRating.toFixed(1)} ★` : '—'}
+          icon={Star}
+          tone="warning"
+          hint={reviewList.length ? `${reviewList.length} review${reviewList.length === 1 ? '' : 's'}` : 'No reviews yet'}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -122,6 +142,32 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent reviews */}
+      {reviewList.length > 0 && (
+        <Card>
+          <CardHeader className="flex-row items-center gap-2 space-y-0">
+            <Star className="size-5 text-accent" />
+            <CardTitle>Recent reviews</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y">
+              {reviewList.slice(0, 5).map((r, i) => (
+                <li key={i} className="py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{r.customer_name ?? 'Customer'}</span>
+                    <span className="text-accent">
+                      {'★'.repeat(r.rating)}
+                      <span className="text-muted-foreground/40">{'★'.repeat(5 - r.rating)}</span>
+                    </span>
+                  </div>
+                  {r.comment && <p className="mt-1 text-sm text-muted-foreground">“{r.comment}”</p>}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

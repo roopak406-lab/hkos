@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { Check, Copy, Loader2, Rocket, MessageCircle, PlusCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { format, parseISO } from 'date-fns';
+import { Check, Copy, Loader2, Rocket, MessageCircle, PlusCircle, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,8 @@ interface Props {
   published: boolean;
   menuDate: string;
   menuDateLabel: string;
+  today: string;
+  upcomingDates: string[];
 }
 
 export function MenuPlanner({
@@ -34,10 +38,17 @@ export function MenuPlanner({
   published,
   menuDate,
   menuDateLabel,
+  today,
+  upcomingDates,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+
+  const goToDate = (d: string) => {
+    if (d) router.push(`/admin/menu?date=${d}`);
+  };
 
   // Seed selection state from any existing published menu.
   const [sel, setSel] = useState<Record<string, Selection>>(() => {
@@ -71,7 +82,7 @@ export function MenuPlanner({
   };
 
   const whatsappText = useMemo(() => {
-    const lines = [`*${kitchen.name}*`, `_Tomorrow's Menu · ${menuDateLabel}_`, ''];
+    const lines = [`*${kitchen.name}*`, `_Menu for ${menuDateLabel}_`, ''];
     for (const c of categories) {
       const items = selectedProducts.filter((p) => p.category_id === c.id);
       if (!items.length) continue;
@@ -79,7 +90,7 @@ export function MenuPlanner({
       for (const p of items) lines.push(`• ${p.name} — ${formatPaise(priceFor(p))}`);
       lines.push('');
     }
-    lines.push(`Order before ${kitchen.order_cutoff_time?.slice(0, 5)} today 🍽️`);
+    lines.push(`Order before ${kitchen.order_cutoff_time?.slice(0, 5)} the day before 🍽️`);
     lines.push(`👉 ${location.origin}/order`);
     return lines.join('\n');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,7 +115,7 @@ export function MenuPlanner({
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Tomorrow’s menu</h1>
+          <h1 className="font-display text-2xl font-bold">Plan the menu</h1>
           <p className="text-muted-foreground">
             {menuDateLabel} · {published ? 'Published' : 'Not published yet'}
           </p>
@@ -115,6 +126,39 @@ export function MenuPlanner({
           </Button>
         </div>
       </div>
+
+      {/* Calendar / date picker */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-3 p-4">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <CalendarDays className="size-4 text-primary" /> Menu date
+            <Input
+              type="date"
+              className="h-10 w-auto"
+              value={menuDate}
+              min={today}
+              onChange={(e) => goToDate(e.target.value)}
+            />
+          </label>
+          {upcomingDates.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Published:</span>
+              {upcomingDates.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => goToDate(d)}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    d === menuDate ? 'border-primary bg-primary/10 text-primary' : 'border-input'
+                  }`}
+                >
+                  {format(parseISO(d), 'EEE d MMM')}
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {showAdd && <AddProduct categories={categories} onDone={() => setShowAdd(false)} />}
 

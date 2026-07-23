@@ -1,8 +1,9 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { tomorrowKey, prettyDate } from '@/lib/format';
+import { prettyDate } from '@/lib/format';
+import { loadPublicMenu } from '@/lib/public-menu';
 import { CheckoutClient } from '@/components/customer/checkout-client';
-import type { DeliverySlot, Kitchen } from '@/lib/database.types';
+import type { Kitchen } from '@/lib/database.types';
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -19,21 +20,16 @@ export default async function CheckoutPage({ params }: Params) {
     .maybeSingle();
   if (!kitchen) notFound();
 
-  const { data: slots } = await supabase
-    .from('delivery_slots')
-    .select('*')
-    .eq('kitchen_id', kitchen.id)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
-
-  const menuDate = tomorrowKey();
+  const menu = await loadPublicMenu(supabase, kitchen as Kitchen);
+  if (!menu.menuDate || menu.orderingClosed) redirect(`/k/${slug}`);
 
   return (
     <CheckoutClient
       kitchen={kitchen as Kitchen}
-      slots={(slots ?? []) as DeliverySlot[]}
-      menuDate={menuDate}
-      menuDateLabel={prettyDate(menuDate)}
+      slots={menu.slots}
+      menuDate={menu.menuDate}
+      menuDateLabel={prettyDate(menu.menuDate)}
+      basePath={`/k/${slug}`}
     />
   );
 }
