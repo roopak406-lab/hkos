@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * HKOS Design Tokens
+ * Warm, appetite-driven palette. Terracotta primary + saffron accent on a
+ * warm cream canvas. Every colour is a CSS variable so a kitchen can be
+ * re-themed by overriding these on a wrapper (see multi-tenant theming).
+ */
+@layer base {
+  /*
+   * Brand palette derived from the Aromatic Tadka Kitchen emblem:
+   * deep forest green + antique gold on warm ivory.
+   */
+  :root {
+    --background: 45 38% 97%; /* warm ivory */
+    --foreground: 156 30% 12%; /* deep pine near-black */
+
+    --card: 0 0% 100%;
+    --card-foreground: 156 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 156 30% 12%;
+
+    --primary: 152 58% 22%; /* forest green (emblem field) */
+    --primary-foreground: 45 55% 96%;
+
+    --secondary: 145 22% 92%; /* soft sage */
+    --secondary-foreground: 152 40% 18%;
+
+    --muted: 145 18% 94%;
+    --muted-foreground: 152 12% 38%;
+
+    --accent: 41 58% 48%; /* antique gold (emblem detailing) */
+    --accent-foreground: 152 45% 14%;
+
+    --success: 150 55% 30%; /* coriander green */
+    --success-foreground: 45 55% 96%;
+
+    --warning: 41 70% 46%; /* gold-amber */
+    --warning-foreground: 152 45% 14%;
+
+    --destructive: 4 68% 46%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 145 18% 87%;
+    --input: 145 18% 87%;
+    --ring: 152 58% 22%;
+
+    --radius: 1rem; /* rounded, friendly cards */
+  }
+
+  .dark {
+    --background: 156 30% 8%; /* deep pine */
+    --foreground: 45 40% 94%;
+    --card: 156 26% 11%;
+    --card-foreground: 45 40% 94%;
+    --popover: 156 26% 11%;
+    --popover-foreground: 45 40% 94%;
+    --primary: 150 45% 40%; /* brighter green for contrast on dark */
+    --primary-foreground: 45 55% 96%;
+    --secondary: 156 18% 18%;
+    --secondary-foreground: 45 40% 94%;
+    --muted: 156 16% 18%;
+    --muted-foreground: 145 12% 62%;
+    --accent: 41 62% 55%; /* luminous gold */
+    --accent-foreground: 156 45% 10%;
+    --success: 150 45% 42%;
+    --success-foreground: 45 55% 96%;
+    --warning: 41 65% 55%;
+    --warning-foreground: 156 45% 10%;
+    --destructive: 4 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 156 14% 22%;
+    --input: 156 14% 22%;
+    --ring: 150 45% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+/* Utility: hide scrollbars on horizontal category rails */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
