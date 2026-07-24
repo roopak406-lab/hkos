@@ -29,11 +29,12 @@ export async function POST(req: Request) {
   const input = parsed.data;
   const supabase = createAdminClient();
 
-  // Server-side cut-off enforcement (defence in depth — the public page also
-  // hides ordering after cut-off). Evaluated in the kitchen's own timezone.
+  // Server-side ordering enforcement (defence in depth — the public page also
+  // hides ordering when closed). Honours the owner's open/closed override and,
+  // in 'auto' mode, the cut-off time. Evaluated in the kitchen's own timezone.
   const { data: kitchen } = await supabase
     .from('kitchens')
-    .select('order_cutoff_time, timezone')
+    .select('order_cutoff_time, timezone, ordering_status')
     .eq('id', input.kitchenId)
     .maybeSingle();
   if (kitchen) {
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       input.deliveryDate,
       kitchen.order_cutoff_time,
       kitchen.timezone,
+      kitchen.ordering_status,
     );
     if (win.closed) {
       return NextResponse.json(
